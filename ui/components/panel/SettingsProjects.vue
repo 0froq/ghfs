@@ -337,16 +337,33 @@ watch(() => hub.hubRoots.value.join('|'), () => {
           :data-path="entry.path"
         >
           <DisplayProjectIcon
-            :project="{ id: entry.path, repo: entry.repo }"
+            :project="{ id: entry.path, repo: entry.repo ?? '' }"
             :icon-data-url="entry.iconDataUrl"
             :size="28"
             :class="entry.enabled ? 'ring-1 ring-primary-500/30' : ''"
           />
           <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium font-mono truncate" :class="entry.enabled ? '' : 'color-muted'">{{ entry.repo }}</div>
+            <div class="text-sm font-medium font-mono truncate" :class="entry.enabled ? '' : 'color-muted'">{{ entry.repo ?? entry.name }}</div>
             <div class="text-[11px] color-faint font-mono truncate" :title="entry.path">{{ entry.path }}</div>
+            <div
+              v-if="entry.error"
+              class="text-[11px] color-yellow-700 dark:color-yellow-300 flex items-start gap-1 mt-0.5"
+              :data-testid="'hub-picker-error'"
+            >
+              <span class="i-ph-warning-duotone mt-0.5 shrink-0" />
+              <span class="truncate" :title="entry.error">{{ entry.error }}</span>
+            </div>
           </div>
+          <span
+            v-if="entry.error"
+            class="btn-toggle-pill btn-toggle-pill-off shrink-0 op-fade"
+            :title="entry.error"
+          >
+            <span class="i-ph-prohibit-duotone" />
+            <span>Unresolved</span>
+          </span>
           <button
+            v-else
             type="button"
             class="btn-toggle-pill shrink-0"
             :class="entry.enabled ? 'btn-toggle-pill-on' : 'btn-toggle-pill-off'"

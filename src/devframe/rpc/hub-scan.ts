@@ -1,30 +1,11 @@
 import type { ScannedRepo } from '../../hub/scanner'
 import type { HubScannedProject } from './types'
 import { defineRpcFunction } from 'devframe'
-import { resolveConfig } from '../../config/load'
-import { resolveRepo } from '../../config/repo'
+import { resolveScannedRepo } from '../../hub/scanned-repo'
 import { scanGitRepos } from '../../hub/scanner'
 import { findProjectIcon } from '../../utils/project-icon'
 import { resolveHubRoot } from './hub-helpers'
 import { getHubContext } from './utils'
-
-async function tryResolveRepo(cwd: string): Promise<string | null> {
-  try {
-    let configRepo: string | undefined
-    try {
-      const config = await resolveConfig({ cwd })
-      configRepo = config.repo || undefined
-    }
-    catch {
-      // ghfs.config.ts may be present but fail to load; fall through to git/package.json detection.
-    }
-    const result = await resolveRepo({ cwd, configRepo, interactive: false })
-    return result.repo
-  }
-  catch {
-    return null
-  }
-}
 
 export const hubScan = defineRpcFunction({
   name: 'ghfs:hub-scan',
@@ -53,20 +34,19 @@ export const hubScan = defineRpcFunction({
           }
         }
         const resolved = await Promise.all(unique.map(async (repo) => {
-          const [iconDataUrl, resolvedRepo] = await Promise.all([
+          const [iconDataUrl, resolution] = await Promise.all([
             findProjectIcon(repo.path).catch(() => null),
-            tryResolveRepo(repo.path),
+            resolveScannedRepo(repo.path),
           ])
-          return { repo, resolvedRepo, iconDataUrl }
+          return { repo, resolution, iconDataUrl }
         }))
         const entries: HubScannedProject[] = []
-        for (const { repo, resolvedRepo, iconDataUrl } of resolved) {
-          if (!resolvedRepo)
-            continue
+        for (const { repo, resolution, iconDataUrl } of resolved) {
           entries.push({
             path: repo.path,
             name: repo.name,
-            repo: resolvedRepo,
+            repo: resolution.repo,
+            error: resolution.error,
             enabled: enabledPaths.has(repo.path),
             iconDataUrl,
           })
